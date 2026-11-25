@@ -8,6 +8,7 @@ import Question from './screens/Question.jsx';
 import Leaderboard from './screens/Leaderboard.jsx';
 import About from './screens/About.jsx';
 import MyAnswers from './screens/MyAnswers.jsx';
+import Snow from './components/Snow.jsx';
 import Admin from './screens/Admin.jsx';
 
 function Centered({ children }) {
@@ -97,7 +98,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 bg-pine-900/95 backdrop-blur border-b border-gold-500/30">
+      <Snow />
+      <header className="sticky top-0 z-20 bg-pine-900/95 backdrop-blur border-b border-gold-500/30">
         <div className="mx-auto max-w-3xl px-4 py-3 flex items-center justify-between gap-3">
           <button className="font-bold text-gold-400 text-left" onClick={() => navigate('/')}>
             🎄 {t.appName}
@@ -123,7 +125,7 @@ export default function App() {
           })}
         </nav>
       </header>
-      <main className="mx-auto max-w-3xl px-4 py-6">{screen}</main>
+      <main className="relative z-10 mx-auto max-w-3xl px-4 py-6">{screen}</main>
     </div>
   );
 }

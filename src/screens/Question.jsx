@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, apiImageUrl } from '../api.js';
 import { t } from '../i18n/strings.js';
 import { useCountdown, useCountUp } from '../hooks.js';
+import Confetti from '../components/Confetti.jsx';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -28,6 +29,7 @@ function Result({ no, result, navigate }) {
   const ca = result.correctAnswer;
   return (
     <div className="rounded-2xl bg-pine-800 border border-gold-500/50 p-6 text-center" role="status">
+      {result.isCorrect && !timedOut && <Confetti />}
       <h2 className="text-2xl font-bold">{headline}</h2>
       <div className="mt-4 text-6xl font-extrabold text-gold-400 tabular-nums">{shown}</div>
       <div className="text-white/70">{t.question.points}</div>
