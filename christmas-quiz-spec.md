@@ -104,7 +104,7 @@ All lists live in the `Julequiz2026` site. Use simple internal names (no spaces 
 | Title | Single line | Short admin label, e.g. "Dag 5 - Gløgg" |
 | QuestionNo | Number (0 decimals) | 1-24, **indexed**, unique |
 | UnlockDate | Single line | `YYYY-MM-DD` (text avoids timezone problems) |
-| Type | Choice | `mc` (multiple choice), `estimate` (numeric guess) |
+| QuestionType | Choice | `mc` (multiple choice), `estimate` (numeric guess). Internal name is `QuestionType` because `Type` is reserved in SharePoint. The API still exposes it as `type` |
 | Category | Choice | Optional: Jul, Norge, Danmark, Inspirit, D365, Bilde, Kolleger |
 | QuestionText | Multiple lines (plain) | |
 | ImagePath | Single line | Relative path, e.g. `/img/q05.jpg`. Neutral filenames, no hints |
