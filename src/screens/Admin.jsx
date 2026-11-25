@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { t } from '../i18n/strings.js';
 import AdminResults from './AdminResults.jsx';
+import AdminSettings from './AdminSettings.jsx';
 
 const CATEGORIES = ['', 'Jul', 'Norge', 'Danmark', 'Inspirit', 'D365', 'Bilde', 'Kolleger'];
 const ids = ['a', 'b', 'c', 'd', 'e'];
@@ -223,8 +224,11 @@ export default function Admin() {
       <div className="mt-3 flex gap-2">
         {btn('questions', 'Spørsmål')}
         {btn('results', 'Resultater')}
+        {btn('settings', 'Innstillinger')}
       </div>
-      {tab === 'questions' ? <QuestionsAdmin /> : <AdminResults />}
+      {tab === 'questions' && <QuestionsAdmin />}
+      {tab === 'results' && <AdminResults />}
+      {tab === 'settings' && <AdminSettings />}
     </section>
   );
 }

@@ -40,6 +40,7 @@ export default function AdminResults() {
   const [filterName, setFilterName] = useState('');
   const [filterNo, setFilterNo] = useState('');
   const [view, setView] = useState('questions');
+  const [note, setNote] = useState('');
 
   const load = () => {
     setData(null);
@@ -47,6 +48,18 @@ export default function AdminResults() {
     api('/admin/results').then(setData).catch((e) => setError(e.message));
   };
   useEffect(load, []);
+
+  async function remove(a) {
+    const ok = window.confirm(`Slette forsøket til ${a.displayName} på spørsmål ${a.no}? Totalene beregnes på nytt, og personen kan spille spørsmålet på nytt.`);
+    if (!ok) return;
+    try {
+      await api(`/admin/manage?op=attempt&key=${encodeURIComponent(a.key)}`, { method: 'DELETE' });
+      setNote(`Slettet: ${a.displayName}, spørsmål ${a.no}`);
+      load();
+    } catch (e) {
+      setNote(`Kunne ikke slette: ${e.message}`);
+    }
+  }
 
   const attempts = useMemo(() => {
     if (!data) return [];
@@ -141,7 +154,8 @@ export default function AdminResults() {
             </select>
           </div>
           <p className="text-sm text-white/60">{attempts.length} rader</p>
-          <Table head={['Startet', 'Navn', '#', 'Status', 'Svar', 'Riktig', 'Poeng', 'Tid', 'På dagen']}>
+          {note && <p className="text-sm" role="status">{note}</p>}
+          <Table head={['Startet', 'Navn', '#', 'Status', 'Svar', 'Riktig', 'Poeng', 'Tid', 'På dagen', '']}>
             {attempts.map((a, i) => (
               <tr key={`${a.displayName}-${a.no}-${i}`} className="odd:bg-white/5">
                 <td className="py-2 px-3">{when(a.startedAt)}</td>
@@ -153,6 +167,11 @@ export default function AdminResults() {
                 <td className="px-3">{a.points}</td>
                 <td className="px-3">{secs(a.elapsedMs)}</td>
                 <td className="px-3">{a.status === 'answered' ? (a.onTheDay ? 'Ja' : 'Nei') : '–'}</td>
+                <td className="px-3">
+                  <button className="text-red-300 underline" onClick={() => remove(a)}>
+                    Slett
+                  </button>
+                </td>
               </tr>
             ))}
           </Table>

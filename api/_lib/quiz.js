@@ -495,6 +495,7 @@ export async function adminResults(ctx) {
   const rows = [...attempts]
     .sort((a, b) => String(b.StartedAt || '').localeCompare(String(a.StartedAt || '')))
     .map((a) => ({
+      key: a.Title,
       displayName: a.DisplayName,
       no: Number(a.QuestionNo),
       status: a.Status,

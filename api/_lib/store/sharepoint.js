@@ -99,6 +99,10 @@ export function createSharePointStore() {
     async getAttempt(key) {
       return (await listItems('attempts', `fields/Title eq '${esc(key)}'`))[0] || null;
     },
+    async deleteAttempt(rec) {
+      const r = await graph('DELETE', `${base('attempts')}/${rec.id}`);
+      if (!r.ok) throw failure(r);
+    },
     createAttempt: (fields) => createItem('attempts', fields),
     updateAttempt: (rec, patch) => updateItem('attempts', rec, patch),
 

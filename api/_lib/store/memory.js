@@ -66,6 +66,10 @@ export function createMemoryStore({ settings = {}, questions = [], images = {} }
       const a = data.attempts.find((r) => r.Title === key);
       return a ? { ...a } : null;
     },
+    async deleteAttempt(rec) {
+      const i = data.attempts.findIndex((a) => a.id === rec.id);
+      if (i >= 0) data.attempts.splice(i, 1);
+    },
     async createAttempt(fields) {
       return create('attempts', 'Title', fields);
     },
