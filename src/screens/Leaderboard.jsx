@@ -107,7 +107,8 @@ export default function Leaderboard() {
 
       <div className="mt-4 rounded-2xl bg-pine-800 border border-white/10 overflow-hidden">
         {error && <p className="p-4 text-white/80">{error}</p>}
-        {!error && !data && <p className="p-4 text-white/70">{t.loading}</p>}
+        {!error && !data && tab === 'question' && !no && <p className="p-4 text-white/70">{t.leaderboard.hidden}</p>}
+        {!error && !data && !(tab === 'question' && !no) && <p className="p-4 text-white/70">{t.loading}</p>}
         {data && data.rows.length === 0 && <p className="p-4 text-white/70">{t.leaderboard.empty}</p>}
         {data && data.rows.length > 0 && (
           <table className="w-full text-sm">

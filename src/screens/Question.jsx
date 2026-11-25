@@ -135,24 +135,31 @@ export default function Question({ no, navigate, onChange }) {
   }, [no, start]);
 
   // Preload the image before Start so the timer never includes download time.
+  // A ref (not state) guards the request: state changes must not cancel the in-flight fetch.
+  const imageRequested = useRef(false);
+  const mounted = useRef(true);
   useEffect(() => {
-    if (!hasImage || imageState !== 'idle') return undefined;
-    if (phase !== 'ready' && phase !== 'live') return undefined;
-    let cancelled = false;
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasImage || imageRequested.current) return;
+    if (phase !== 'ready' && phase !== 'live') return;
+    imageRequested.current = true;
     setImageState('loading');
     apiImageUrl(`/questions/${no}/image`)
       .then((url) => {
-        if (cancelled) return URL.revokeObjectURL(url);
+        if (!mounted.current) return URL.revokeObjectURL(url);
         setImageUrl(url);
         return setImageState('done');
       })
       .catch(() => {
-        if (!cancelled) setImageState('failed');
+        if (mounted.current) setImageState('failed');
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [hasImage, imageState, phase, no]);
+  }, [hasImage, phase, no]);
 
   useEffect(() => () => imageUrl && URL.revokeObjectURL(imageUrl), [imageUrl]);
 
