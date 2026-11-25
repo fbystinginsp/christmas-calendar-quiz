@@ -270,9 +270,10 @@ async function addToTotals(ctx, { points, correct, elapsedMs }) {
 
 // ---------- answer ----------
 export async function answerQuestion(ctx, no, answer) {
-  const { settings, today, reveal } = await loadEnv(ctx);
+  const { settings, today, closed, reveal } = await loadEnv(ctx);
   const q = await loadQuestion(ctx, no);
   if (q.unlockDate > today) throw new ApiError(403, 'locked', 'Question is not unlocked yet');
+  if (closed) throw new ApiError(403, 'closed', 'The quiz is closed');
 
   const attempt = await ctx.store.getAttempt(attemptKey(ctx.user.id, q.no));
   if (!attempt) throw new ApiError(409, 'not_started', 'Press Start first');
@@ -297,7 +298,7 @@ export async function answerQuestion(ctx, no, answer) {
     answerValue = answer;
     accuracy = answer === q.correctOptionId ? 1 : 0;
   } else {
-    const guess = typeof answer === 'string' ? Number(answer.replace(',', '.')) : answer;
+    const guess = typeof answer === 'string' ? Number(answer.replace(/\s/g, '').replace(',', '.')) : answer;
     if (typeof guess !== 'number' || !Number.isFinite(guess)) throw new ApiError(400, 'invalid_answer', 'Enter a number');
     answerValue = String(guess);
     accuracy = estimateAccuracy(guess, q.correctNumber, q.tolPct, q.zeroPct);
@@ -378,9 +379,66 @@ export async function getLeaderboard(ctx, { scope, no }) {
     correctCount: n(t.CorrectCount),
     answeredCount: n(t.AnsweredCount),
     avgCorrectMs: n(t.CorrectCount) ? Math.round(n(t.TotalCorrectTimeMs) / n(t.CorrectCount)) : null,
+    // positive = moved up since the last nightly snapshot
+    rankChange: t.RankSnapshot ? n(t.RankSnapshot) - (i + 1) : null,
     isMe: t.Title === ctx.user.id,
   }));
+  assignBadges(rows);
   return { scope: 'total', rows: topWithMe(rows, (r) => r.isMe), participants: rows.length };
+}
+
+// leader: #1 (with points) | mover: biggest climb since the snapshot | fast: quickest average
+// on correct answers (needs at least 3 correct so a single lucky answer doesn't win it).
+export function assignBadges(rows, minCorrectForFast = 3) {
+  for (const r of rows) r.badges = [];
+  if (rows[0] && rows[0].totalPoints > 0) rows[0].badges.push('leader');
+
+  let mover = null;
+  for (const r of rows) {
+    if (r.rankChange > 0 && (!mover || r.rankChange > mover.rankChange)) mover = r; // ties: better rank wins (rows are in rank order)
+  }
+  if (mover) mover.badges.push('mover');
+
+  let fast = null;
+  for (const r of rows) {
+    if (r.correctCount >= minCorrectForFast && r.avgCorrectMs != null && (!fast || r.avgCorrectMs < fast.avgCorrectMs)) fast = r;
+  }
+  if (fast) fast.badges.push('fast');
+  return rows;
+}
+
+// ---------- review ("My answers") ----------
+export async function getReview(ctx) {
+  const { reveal } = await loadEnv(ctx);
+  const [qs, attempts] = await Promise.all([ctx.store.questions(), ctx.store.attemptsForUser(ctx.user.id)]);
+  const byNo = new Map(qs.map(normalizeQuestion).map((q) => [q.no, q]));
+  const items = attempts
+    .filter((a) => a.Status === 'answered' || a.Status === 'expired')
+    .sort((a, b) => Number(a.QuestionNo) - Number(b.QuestionNo))
+    .map((a) => {
+      const q = byNo.get(Number(a.QuestionNo));
+      if (!q) return null;
+      let yourAnswer = '';
+      if (a.Status === 'answered') {
+        yourAnswer = q.type === 'mc' ? q.options.find((o) => o.id === a.AnswerValue)?.text ?? '' : `${a.AnswerValue}${q.unit ? ` ${q.unit}` : ''}`;
+      }
+      return {
+        no: q.no,
+        type: q.type,
+        category: q.category,
+        text: q.text,
+        status: a.Status,
+        yourAnswer,
+        isCorrect: !!a.IsCorrect,
+        points: n(a.Points),
+        elapsedMs: a.ElapsedMs == null ? null : n(a.ElapsedMs),
+        onTheDay: !!a.OnTheDay,
+        correctAnswer: reveal ? correctAnswerOf(q) : null,
+        explanation: reveal ? q.explanation : null,
+      };
+    })
+    .filter(Boolean);
+  return { reveal, items };
 }
 
 // ---------- image ----------

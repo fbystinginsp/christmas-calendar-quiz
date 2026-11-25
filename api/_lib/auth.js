@@ -4,7 +4,21 @@ import { ApiError } from './errors.js';
 const cache = new Map();
 const TTL_MS = 5 * 60 * 1000;
 
-// Proves identity by forwarding the caller's Graph token to GET /me.
+// Reads the tenant id claim from a JWT. No signature check here: Graph has already
+// validated the token by the time we use this. Returns null for opaque/personal tokens.
+export function tokenTenant(token) {
+  try {
+    const payload = String(token).split('.')[1];
+    if (!payload) return null;
+    const json = JSON.parse(Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+    return json.tid || null;
+  } catch {
+    return null;
+  }
+}
+
+// Proves identity by forwarding the caller's Graph token to GET /me,
+// and requires the token to come from our own tenant (blocks personal/other-tenant accounts).
 export async function verifyUser(req) {
   const header = String(req.headers.authorization || '');
   if (!header.startsWith('Bearer ')) throw new ApiError(401, 'unauthorized', 'Missing token');
@@ -18,6 +32,9 @@ export async function verifyUser(req) {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!r.ok) throw new ApiError(401, 'unauthorized', 'Invalid token');
+  if (process.env.TENANT_ID && tokenTenant(token) !== process.env.TENANT_ID) {
+    throw new ApiError(403, 'wrong_tenant', 'Only Inspirit accounts can play');
+  }
   const j = await r.json();
   const user = { id: j.id, displayName: j.displayName || j.userPrincipalName || 'Ukjent', mail: j.mail || j.userPrincipalName || '' };
 

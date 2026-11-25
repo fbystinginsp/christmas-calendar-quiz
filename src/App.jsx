@@ -7,6 +7,7 @@ import Home from './screens/Home.jsx';
 import Question from './screens/Question.jsx';
 import Leaderboard from './screens/Leaderboard.jsx';
 import About from './screens/About.jsx';
+import MyAnswers from './screens/MyAnswers.jsx';
 import Admin from './screens/Admin.jsx';
 
 function Centered({ children }) {
@@ -81,6 +82,7 @@ export default function App() {
   let screen;
   if (qMatch) screen = <Question key={qMatch[1]} no={Number(qMatch[1])} navigate={navigate} onChange={refreshMe} />;
   else if (path === '/leaderboard') screen = <Leaderboard navigate={navigate} />;
+  else if (path === '/answers') screen = <MyAnswers />;
   else if (path === '/about') screen = <About />;
   else if (path === '/admin' && me.isAdmin) screen = <Admin />;
   else screen = <Home me={me} navigate={navigate} />;
@@ -88,6 +90,7 @@ export default function App() {
   const navItems = [
     ['/', t.nav.home],
     ['/leaderboard', t.nav.leaderboard],
+    ['/answers', t.nav.answers],
     ['/about', t.nav.about],
     ...(me.isAdmin ? [['/admin', t.nav.admin]] : []),
   ];

@@ -4,6 +4,26 @@ import { t } from '../i18n/strings.js';
 
 const fmtAvg = (ms) => (ms == null ? '–' : `${(ms / 1000).toFixed(1)} s`);
 
+function Badges({ badges = [] }) {
+  return badges.map((b) => {
+    const [icon, label] = t.badges[b] || [];
+    return icon ? (
+      <span key={b} className="ml-1" role="img" aria-label={label} title={label}>
+        {icon}
+      </span>
+    ) : null;
+  });
+}
+
+function Change({ value }) {
+  if (!value) return null;
+  return (
+    <span className={`ml-2 text-xs ${value > 0 ? 'text-green-300' : 'text-red-300'}`} aria-label={value > 0 ? `opp ${value} plasser` : `ned ${-value} plasser`}>
+      {value > 0 ? `▲${value}` : `▼${-value}`}
+    </span>
+  );
+}
+
 function Row({ r, cols }) {
   return (
     <tr className={r.isMe ? 'bg-gold-500/20 font-semibold' : 'odd:bg-white/5'}>
@@ -11,6 +31,8 @@ function Row({ r, cols }) {
       <td className="py-2 pr-2">
         {r.displayName}
         {r.isMe ? ' (deg)' : ''}
+        <Badges badges={r.badges} />
+        <Change value={r.rankChange} />
       </td>
       {cols(r)}
     </tr>

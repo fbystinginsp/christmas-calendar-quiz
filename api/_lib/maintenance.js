@@ -1,6 +1,6 @@
 import { ApiError, StoreError } from './errors.js';
 import { speedPoints, estimateAccuracy } from './scoring.js';
-import { parseSettings, normalizeQuestion } from './quiz.js';
+import { parseSettings, normalizeQuestion, sortTotals } from './quiz.js';
 
 const n = (v) => Number(v || 0);
 
@@ -134,6 +134,21 @@ export async function rescoreQuestion(ctx, no) {
   }
   const totals = await recalcTotals(ctx);
   return { checked: attempts.length, changed, totals };
+}
+
+// Nightly: stores each user's current rank and points, so "biggest mover" can compare against it.
+export async function snapshotRanks(ctx) {
+  const sorted = sortTotals(await ctx.store.totalsAll());
+  const jobs = [];
+  sorted.forEach((t, i) => {
+    const rank = i + 1;
+    const points = n(t.TotalPoints);
+    if (n(t.RankSnapshot) !== rank || n(t.PointsSnapshot) !== points) {
+      jobs.push(() => updateTotalsRetry(ctx, t, { RankSnapshot: rank, PointsSnapshot: points }));
+    }
+  });
+  for (let i = 0; i < jobs.length; i += 5) await Promise.all(jobs.slice(i, i + 5).map((j) => j()));
+  return { users: sorted.length, written: jobs.length };
 }
 
 export async function deleteAttempt(ctx, key) {

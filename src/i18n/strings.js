@@ -8,7 +8,7 @@ export const t = {
   signOutClear: 'Logg ut og tøm cache',
   errorTitle: 'Noe gikk galt',
   retry: 'Prøv igjen',
-  nav: { home: 'Kalender', leaderboard: 'Toppliste', about: 'Regler', admin: 'Admin' },
+  nav: { home: 'Kalender', leaderboard: 'Toppliste', answers: 'Mine svar', about: 'Regler', admin: 'Admin' },
   home: {
     points: 'poeng',
     rank: 'Plass',
@@ -47,6 +47,20 @@ export const t = {
     loadingImage: 'Laster bilde …',
     imageAlt: 'Bilde til spørsmålet',
     imageFailed: 'Bildet kunne ikke lastes.',
+  },
+  badges: {
+    leader: ['🥇', 'Leder'],
+    mover: ['🚀', 'Største klatrer siden i går'],
+    fast: ['⚡', 'Raskest i snitt på riktige svar'],
+  },
+  answers: {
+    title: 'Mine svar',
+    empty: 'Du har ikke besvart noen spørsmål ennå.',
+    yourAnswer: 'Ditt svar',
+    noAnswer: 'Ikke besvart (tiden gikk ut)',
+    correctAnswer: 'Riktig svar',
+    held: 'Riktig svar og forklaring vises når quizen er avsluttet.',
+    late: 'Spilt etter dagen',
   },
   leaderboard: {
     title: 'Toppliste',
