@@ -50,6 +50,9 @@ export function createMemoryStore({ settings = {}, questions = [] } = {}) {
       return true;
     },
 
+    async allAttempts() {
+      return data.attempts.map((r) => ({ ...r }));
+    },
     async attemptsForUser(userId) {
       return data.attempts.filter((a) => a.UserId === userId).map((r) => ({ ...r }));
     },

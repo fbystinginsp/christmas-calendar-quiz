@@ -422,3 +422,80 @@ export function validateQuestionInput(b) {
 export async function adminListQuestions(ctx) {
   return { questions: (await ctx.store.questions()).map(normalizeQuestion).sort((a, b) => a.no - b.no) };
 }
+
+// ---------- admin: results ----------
+export async function adminResults(ctx) {
+  const [rawQs, attempts, totals] = await Promise.all([ctx.store.questions(), ctx.store.allAttempts(), ctx.store.totalsAll()]);
+  const questions = rawQs.map(normalizeQuestion).sort((a, b) => a.no - b.no);
+  const qByNo = new Map(questions.map((q) => [q.no, q]));
+
+  const answerText = (a) => {
+    const q = qByNo.get(Number(a.QuestionNo));
+    if (a.AnswerValue == null || a.AnswerValue === '') return '';
+    if (q?.type === 'mc') return q.options.find((o) => o.id === a.AnswerValue)?.text ?? a.AnswerValue;
+    return `${a.AnswerValue}${q?.unit ? ` ${q.unit}` : ''}`;
+  };
+
+  const participants = sortTotals(totals).map((t, i) => ({
+    rank: i + 1,
+    displayName: t.DisplayName,
+    totalPoints: n(t.TotalPoints),
+    correctCount: n(t.CorrectCount),
+    answeredCount: n(t.AnsweredCount),
+    avgCorrectMs: n(t.CorrectCount) ? Math.round(n(t.TotalCorrectTimeMs) / n(t.CorrectCount)) : null,
+  }));
+
+  const perQuestion = questions.map((q) => {
+    const rows = attempts.filter((a) => Number(a.QuestionNo) === q.no);
+    const answered = rows.filter((a) => a.Status === 'answered');
+    const correct = answered.filter((a) => a.IsCorrect);
+    const wrong = {};
+    for (const a of answered.filter((x) => !x.IsCorrect)) {
+      const label = answerText(a);
+      wrong[label] = (wrong[label] || 0) + 1;
+    }
+    const topWrong = Object.entries(wrong).sort((a, b) => b[1] - a[1])[0];
+    return {
+      no: q.no,
+      title: q.title,
+      type: q.type,
+      unlockDate: q.unlockDate,
+      correctAnswer: q.type === 'mc' ? q.options.find((o) => o.id === q.correctOptionId)?.text ?? '' : `${q.correctNumber ?? ''}${q.unit ? ` ${q.unit}` : ''}`,
+      answered: answered.length,
+      expired: rows.filter((a) => a.Status === 'expired').length,
+      inProgress: rows.filter((a) => a.Status === 'started').length,
+      correct: correct.length,
+      correctPct: answered.length ? Math.round((correct.length / answered.length) * 100) : null,
+      avgPoints: answered.length ? Math.round(answered.reduce((s, a) => s + n(a.Points), 0) / answered.length) : null,
+      avgElapsedMs: answered.length ? Math.round(answered.reduce((s, a) => s + n(a.ElapsedMs), 0) / answered.length) : null,
+      topWrong: topWrong ? { answer: topWrong[0], count: topWrong[1] } : null,
+    };
+  });
+
+  const rows = [...attempts]
+    .sort((a, b) => String(b.StartedAt || '').localeCompare(String(a.StartedAt || '')))
+    .map((a) => ({
+      displayName: a.DisplayName,
+      no: Number(a.QuestionNo),
+      status: a.Status,
+      answer: answerText(a),
+      isCorrect: !!a.IsCorrect,
+      points: n(a.Points),
+      elapsedMs: a.ElapsedMs == null ? null : n(a.ElapsedMs),
+      onTheDay: !!a.OnTheDay,
+      startedAt: a.StartedAt || '',
+    }));
+
+  return {
+    summary: {
+      participants: participants.length,
+      attempts: attempts.length,
+      answered: attempts.filter((a) => a.Status === 'answered').length,
+      expired: attempts.filter((a) => a.Status === 'expired').length,
+      inProgress: attempts.filter((a) => a.Status === 'started').length,
+    },
+    participants,
+    perQuestion,
+    attempts: rows,
+  };
+}

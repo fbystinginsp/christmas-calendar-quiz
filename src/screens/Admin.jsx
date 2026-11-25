@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { t } from '../i18n/strings.js';
+import AdminResults from './AdminResults.jsx';
 
 const CATEGORIES = ['', 'Jul', 'Norge', 'Danmark', 'Inspirit', 'D365', 'Bilde', 'Kolleger'];
 const ids = ['a', 'b', 'c', 'd', 'e'];
@@ -152,7 +153,7 @@ function Editor({ initial, onSaved, onDeleted }) {
   );
 }
 
-export default function Admin() {
+function QuestionsAdmin() {
   const [questions, setQuestions] = useState(null);
   const [sel, setSel] = useState(null);
   const [error, setError] = useState('');
@@ -174,7 +175,6 @@ export default function Admin() {
 
   return (
     <section>
-      <h1 className="text-2xl font-bold text-gold-400">{t.admin.title}</h1>
       <div className="mt-4 grid grid-cols-4 sm:grid-cols-6 gap-2">
         {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => (
           <button
@@ -198,6 +198,29 @@ export default function Admin() {
           }}
         />
       )}
+    </section>
+  );
+}
+
+export default function Admin() {
+  const [tab, setTab] = useState('questions');
+  const btn = (id, label) => (
+    <button
+      onClick={() => setTab(id)}
+      aria-pressed={tab === id}
+      className={`rounded-full px-4 py-1.5 text-sm border ${tab === id ? 'bg-gold-500 text-pine-900 border-gold-500 font-semibold' : 'border-white/20'}`}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <section>
+      <h1 className="text-2xl font-bold text-gold-400">{t.admin.title}</h1>
+      <div className="mt-3 flex gap-2">
+        {btn('questions', 'Spørsmål')}
+        {btn('results', 'Resultater')}
+      </div>
+      {tab === 'questions' ? <QuestionsAdmin /> : <AdminResults />}
     </section>
   );
 }

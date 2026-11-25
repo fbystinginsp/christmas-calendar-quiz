@@ -86,6 +86,7 @@ export function createSharePointStore() {
       return true;
     },
 
+    allAttempts: () => listItems('attempts'),
     attemptsForUser: (userId) => listItems('attempts', `fields/UserId eq '${esc(userId)}'`),
     attemptsForQuestion: (no) => listItems('attempts', `fields/QuestionNo eq ${Number(no)}`),
     async getAttempt(key) {

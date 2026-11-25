@@ -299,3 +299,27 @@ test('validateQuestionInput maps to SharePoint field names and rejects bad input
   assert.throws(() => validateQuestionInput({ no: 3, unlockDate: '2026-12-03', type: 'mc', text: 'x', options: [{ id: 'a', text: 'X' }], correctOptionId: 'a' }), { code: 'invalid_question' });
   assert.throws(() => validateQuestionInput({ no: 3, unlockDate: '2026-12-03', type: 'estimate', text: 'x' }), { code: 'invalid_question' });
 });
+
+// ---------- admin results ----------
+test('adminResults aggregates participants, per-question stats and attempts', async () => {
+  const { adminResults } = await import('../api/_lib/quiz.js');
+  const store = mkStore();
+  const t0 = Date.parse('2026-12-05T08:00:00Z');
+  for (const [id, ans, ms] of [['a', 'b', 1000], ['b', 'a', 2000], ['c', 'a', 3000]]) {
+    await startQuestion({ store, user: user(id), now: new Date(t0) }, 5);
+    await answerQuestion({ store, user: user(id), now: new Date(t0 + ms) }, 5, ans);
+  }
+  await startQuestion({ store, user: user('d'), now: new Date(t0) }, 5); // left in progress
+  const r = await adminResults({ store, user: user('admin'), now: new Date(t0 + 5000) });
+  assert.equal(r.summary.participants, 3);
+  assert.equal(r.summary.answered, 3);
+  assert.equal(r.summary.inProgress, 1);
+  const q5 = r.perQuestion.find((x) => x.no === 5);
+  assert.equal(q5.correct, 1);
+  assert.equal(q5.correctPct, 33);
+  assert.equal(q5.correctAnswer, 'B');
+  assert.deepEqual(q5.topWrong, { answer: 'A', count: 2 });
+  assert.equal(r.participants[0].displayName, 'User a');
+  assert.equal(r.attempts.length, 4);
+  assert.equal(r.attempts.find((x) => x.displayName === 'User b').answer, 'A');
+});
