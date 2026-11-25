@@ -1,4 +1,4 @@
-import { graph } from '../graph.js';
+import { graph, graphRaw } from '../graph.js';
 import { ApiError, StoreError } from '../errors.js';
 
 const TTL_MS = 60_000;
@@ -84,6 +84,13 @@ export function createSharePointStore() {
       if (!r.ok) throw failure(r);
       questionsCache = { exp: 0, value: null };
       return true;
+    },
+
+    async getImage(name) {
+      const r = await graphRaw(`/sites/${site()}/drive/root:/QuizImages/${encodeURIComponent(name)}:/content`);
+      if (r.status === 404) return null;
+      if (!r.ok) throw new ApiError(502, 'store_error', `Image error ${r.status}`);
+      return { buffer: r.buffer, contentType: r.contentType };
     },
 
     allAttempts: () => listItems('attempts'),

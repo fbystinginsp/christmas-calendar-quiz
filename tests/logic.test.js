@@ -323,3 +323,39 @@ test('adminResults aggregates participants, per-question stats and attempts', as
   assert.equal(r.attempts.length, 4);
   assert.equal(r.attempts.find((x) => x.displayName === 'User b').answer, 'A');
 });
+
+// ---------- images ----------
+test('safeImageName accepts plain file names only', async () => {
+  const { safeImageName } = await import('../api/_lib/quiz.js');
+  assert.equal(safeImageName('q05.jpg'), 'q05.jpg');
+  assert.equal(safeImageName('/img/q05.PNG'), 'q05.PNG');
+  assert.equal(safeImageName(String.raw`..\..\secret.jpg`), 'secret.jpg');
+  assert.equal(safeImageName('../../etc/passwd'), '');
+  assert.equal(safeImageName('q05.exe'), '');
+  assert.equal(safeImageName(''), '');
+  assert.equal(safeImageName('a b.jpg'), '');
+});
+
+test('image route logic: gated by unlock, 404 without image, never exposes the file name in start', async () => {
+  const { getQuestionImage } = await import('../api/_lib/quiz.js');
+  const store = createMemoryStore({
+    questions: [q(1, '2026-12-01', { ImagePath: 'q01.jpg' }), q(2, '2026-12-20', { ImagePath: 'q02.jpg' }), q(3, '2026-12-01')],
+    images: { 'q01.jpg': { buffer: Buffer.from('x'), contentType: 'image/jpeg' } },
+  });
+  const c = ctx(store, 'u', '2026-12-05T10:00:00Z');
+  const img = await getQuestionImage(c, 1);
+  assert.equal(img.raw.contentType, 'image/jpeg');
+  await assert.rejects(getQuestionImage(c, 2), { code: 'locked', status: 403 });
+  await assert.rejects(getQuestionImage(c, 3), { code: 'no_image', status: 404 });
+  const s = await startQuestion(c, 1);
+  assert.equal(s.question.hasImage, true);
+  assert.ok(!JSON.stringify(s).includes('q01.jpg'));
+  const list = await listQuestions(c);
+  assert.equal(list.questions.find((x) => x.no === 1).hasImage, true);
+  assert.ok(!JSON.stringify(list).includes('q01.jpg'));
+});
+
+test('admin validation rejects a bad image name', () => {
+  assert.throws(() => validateQuestionInput({ no: 3, unlockDate: '2026-12-03', type: 'estimate', text: 'x', correctNumber: 5, imagePath: 'virus.exe' }), { code: 'invalid_question' });
+  assert.equal(validateQuestionInput({ no: 3, unlockDate: '2026-12-03', type: 'estimate', text: 'x', correctNumber: 5, imagePath: 'q03.jpg' }).ImagePath, 'q03.jpg');
+});

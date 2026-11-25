@@ -21,6 +21,18 @@ async function appToken() {
   return tokenCache.token;
 }
 
+// Binary download (e.g. file content). Returns { status, ok, buffer, contentType }.
+export async function graphRaw(path, retry = 0) {
+  const url = path.startsWith('http') ? path : `https://graph.microsoft.com/v1.0${path}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${await appToken()}` }, redirect: 'follow' });
+  if ((res.status === 429 || res.status === 503) && retry < 3) {
+    await sleep(Math.min(Number(res.headers.get('retry-after') || 1), 5) * 1000);
+    return graphRaw(path, retry + 1);
+  }
+  if (!res.ok) return { status: res.status, ok: false };
+  return { status: res.status, ok: true, buffer: Buffer.from(await res.arrayBuffer()), contentType: res.headers.get('content-type') || 'application/octet-stream' };
+}
+
 // App-only Graph call with 429/503 retry (honours Retry-After, max 3 retries).
 export async function graph(method, path, { body, headers, retry = 0 } = {}) {
   const url = path.startsWith('http') ? path : `https://graph.microsoft.com/v1.0${path}`;

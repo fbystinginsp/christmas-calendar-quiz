@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api } from '../api.js';
+import { api, apiImageUrl } from '../api.js';
 import { t } from '../i18n/strings.js';
 import { useCountdown, useCountUp } from '../hooks.js';
 
@@ -74,6 +74,9 @@ export default function Question({ no, navigate, onChange }) {
   const [picked, setPicked] = useState(null);
   const [guess, setGuess] = useState('');
   const [busy, setBusy] = useState(false);
+  const [hasImage, setHasImage] = useState(false);
+  const [imageUrl, setImageUrl] = useState(null);
+  const [imageState, setImageState] = useState('idle'); // idle | loading | done | failed
   const submitted = useRef(false);
 
   const showResultFrom = useCallback(
@@ -113,6 +116,7 @@ export default function Question({ no, navigate, onChange }) {
         const q = l.questions.find((x) => x.no === no);
         if (!q || q.status === 'locked') return setPhase('locked');
         setCategory(q.category || '');
+        setHasImage(!!q.hasImage);
         if (q.status === 'available') return setPhase('ready');
         if (q.status === 'closed') return setPhase('closed');
         return start(); // in_progress (resume) or answered/expired (shows stored result)
@@ -127,6 +131,28 @@ export default function Question({ no, navigate, onChange }) {
       cancelled = true;
     };
   }, [no, start]);
+
+  // Preload the image before Start so the timer never includes download time.
+  useEffect(() => {
+    if (!hasImage || imageState !== 'idle') return undefined;
+    if (phase !== 'ready' && phase !== 'live') return undefined;
+    let cancelled = false;
+    setImageState('loading');
+    apiImageUrl(`/questions/${no}/image`)
+      .then((url) => {
+        if (cancelled) return URL.revokeObjectURL(url);
+        setImageUrl(url);
+        return setImageState('done');
+      })
+      .catch(() => {
+        if (!cancelled) setImageState('failed');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasImage, imageState, phase, no]);
+
+  useEffect(() => () => imageUrl && URL.revokeObjectURL(imageUrl), [imageUrl]);
 
   const remaining = useCountdown(live?.deadlineAt, live?.serverNow);
   const timeUp = phase === 'live' && remaining === 0;
@@ -208,8 +234,8 @@ export default function Question({ no, navigate, onChange }) {
           <div className="text-6xl" aria-hidden="true">🎁</div>
           <h1 className="mt-3 text-2xl font-bold text-gold-400">{t.question.day(no)}</h1>
           <p className="mt-3 text-white/80">{t.question.rules}</p>
-          <button disabled={busy} className="mt-6 w-full rounded-xl bg-gold-500 text-pine-900 text-xl font-bold py-4 disabled:opacity-60" onClick={start}>
-            {t.question.start}
+          <button disabled={busy || (hasImage && imageState === 'loading')} className="mt-6 w-full rounded-xl bg-gold-500 text-pine-900 text-xl font-bold py-4 disabled:opacity-60" onClick={start}>
+            {hasImage && imageState === 'loading' ? t.question.loadingImage : t.question.start}
           </button>
         </div>
       </div>
@@ -246,6 +272,9 @@ export default function Question({ no, navigate, onChange }) {
       </div>
 
       <div className="rounded-2xl bg-pine-800 border border-white/10 p-5">
+        {imageUrl && <img src={imageUrl} alt={t.question.imageAlt} className="mb-4 w-full max-h-72 object-contain rounded-xl bg-black/20" />}
+        {question.hasImage && !imageUrl && imageState !== 'failed' && <p className="mb-3 text-sm text-white/60">{t.question.loadingImage}</p>}
+        {imageState === 'failed' && <p className="mb-3 text-sm text-red-300">{t.question.imageFailed}</p>}
         <h1 className="text-xl font-semibold">{question.text}</h1>
 
         {question.type === 'mc' ? (

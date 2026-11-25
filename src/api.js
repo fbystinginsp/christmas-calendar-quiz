@@ -1,5 +1,13 @@
 import { getToken } from './auth/msal.js';
 
+// Authenticated image fetch -> object URL (an <img> tag cannot send a bearer token).
+export async function apiImageUrl(path) {
+  const token = await getToken();
+  const r = await fetch(`/api${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!r.ok) throw new Error(`image ${r.status}`);
+  return URL.createObjectURL(await r.blob());
+}
+
 export async function api(path, { method = 'GET', body } = {}) {
   const token = await getToken();
   const r = await fetch(`/api${path}`, {

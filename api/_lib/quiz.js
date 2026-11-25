@@ -73,8 +73,14 @@ function statusOf(attempt, nowMs, settings) {
   return nowMs < deadlineMs(attempt, settings) ? 'in_progress' : 'expired';
 }
 
+// Only a plain file name with an image extension is accepted (no paths, no traversal).
+export function safeImageName(p) {
+  const name = String(p || '').split(/[\\/]/).pop().trim();
+  return /^[A-Za-z0-9][A-Za-z0-9._-]*\.(jpe?g|png|webp|gif)$/i.test(name) ? name : '';
+}
+
 function publicQuestion(q, userId) {
-  const base = { no: q.no, type: q.type, category: q.category, text: q.text, unit: q.unit };
+  const base = { no: q.no, type: q.type, category: q.category, text: q.text, unit: q.unit, hasImage: !!safeImageName(q.imagePath) };
   if (q.type === 'mc') {
     base.options = shuffleSeeded(q.options, `${userId}:${q.no}`).map((o) => ({ id: o.id, text: o.text }));
   }
@@ -169,6 +175,7 @@ export async function listQuestions(ctx) {
         unlockDate: q.unlockDate,
         category: q.category,
         type: q.type,
+        hasImage: !!safeImageName(q.imagePath),
         status,
         points: a ? n(a.Points) : null,
         isCorrect: a ? !!a.IsCorrect : null,
@@ -376,6 +383,18 @@ export async function getLeaderboard(ctx, { scope, no }) {
   return { scope: 'total', rows: topWithMe(rows, (r) => r.isMe), participants: rows.length };
 }
 
+// ---------- image ----------
+export async function getQuestionImage(ctx, no) {
+  const { today } = await loadEnv(ctx);
+  const q = await loadQuestion(ctx, no);
+  if (q.unlockDate > today) throw new ApiError(403, 'locked', 'Question is not unlocked yet');
+  const name = safeImageName(q.imagePath);
+  if (!name) throw new ApiError(404, 'no_image', 'No image');
+  const img = await ctx.store.getImage(name);
+  if (!img) throw new ApiError(404, 'no_image', 'Image file not found');
+  return { raw: img };
+}
+
 // ---------- admin: questions ----------
 export function validateQuestionInput(b) {
   const bad = (m) => {
@@ -394,13 +413,14 @@ export function validateQuestionInput(b) {
     QuestionType: b.type,
     QuestionText: String(b.text),
     Explanation: String(b.explanation || ''),
-    ImagePath: String(b.imagePath || ''),
+    ImagePath: String(b.imagePath || '').trim(),
     Unit: String(b.unit || ''),
     TolerancePct: b.tolPct === '' || b.tolPct == null ? 5 : Number(b.tolPct),
     ZeroPct: b.zeroPct === '' || b.zeroPct == null ? 50 : Number(b.zeroPct),
     BasePoints: b.basePoints === '' || b.basePoints == null ? 1000 : Number(b.basePoints),
   };
   if (b.category) fields.Category = b.category;
+  if (fields.ImagePath && !safeImageName(fields.ImagePath)) bad('Image must be a file name like q05.jpg (jpg, png, webp or gif)');
 
   if (b.type === 'mc') {
     const options = Array.isArray(b.options) ? b.options.filter((o) => o && String(o.text || '').trim()) : [];

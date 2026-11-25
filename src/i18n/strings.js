@@ -44,6 +44,9 @@ export const t = {
     correctAnswer: 'Riktig svar',
     notYet: 'Dette spørsmålet er ikke åpnet ennå',
     networkRetry: 'Nettverksfeil – prøver igjen …',
+    loadingImage: 'Laster bilde …',
+    imageAlt: 'Bilde til spørsmålet',
+    imageFailed: 'Bildet kunne ikke lastes.',
   },
   leaderboard: {
     title: 'Toppliste',
@@ -89,5 +92,6 @@ export const t = {
     tolerance: 'Toleranse %',
     zero: 'Null poeng ved %',
     explanation: 'Forklaring (vises etter avslutning)',
+    image: 'Bildefil (filnavn i QuizImages-mappen, f.eks. q05.jpg)',
   },
 };

@@ -15,6 +15,12 @@ export function route(methods, fn, { admin = false } = {}) {
       if (admin && !admin_) throw new ApiError(403, 'forbidden', 'Admins only');
       const ctx = { store: getStore(), now: getNow(), user, isAdmin: admin_ };
       const body = await fn(ctx, req);
+      if (body?.raw) {
+        res.setHeader('Content-Type', body.raw.contentType);
+        res.setHeader('Cache-Control', 'private, max-age=3600');
+        res.status(200).send(body.raw.buffer);
+        return;
+      }
       res.status(200).json(body ?? { ok: true });
     } catch (e) {
       if (e instanceof ApiError) {

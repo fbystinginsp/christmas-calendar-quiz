@@ -12,6 +12,7 @@ function blank(no) {
     no,
     title: `Dag ${no}`,
     unlockDate: defaultDate(no),
+    imagePath: '',
     type: 'mc',
     category: '',
     text: '',
@@ -96,6 +97,9 @@ function Editor({ initial, onSaved, onDeleted }) {
           </select>
         </Field>
       </div>
+      <Field label={t.admin.image}>
+        <input className={inputCls} placeholder="q05.jpg" value={f.imagePath} onChange={(e) => set('imagePath', e.target.value)} />
+      </Field>
       <Field label={t.admin.text}>
         <textarea className={inputCls} rows={3} value={f.text} onChange={(e) => set('text', e.target.value)} />
       </Field>

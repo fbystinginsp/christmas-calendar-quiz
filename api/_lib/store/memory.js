@@ -2,7 +2,7 @@ import { StoreError } from '../errors.js';
 
 // In-memory driver with the same behaviour as the SharePoint one
 // (unique keys, etag conflicts). Used by tests and local experiments.
-export function createMemoryStore({ settings = {}, questions = [] } = {}) {
+export function createMemoryStore({ settings = {}, questions = [], images = {} } = {}) {
   let seq = 0;
   const nextId = () => String(++seq);
   const tag = () => `"${++seq}"`;
@@ -50,6 +50,9 @@ export function createMemoryStore({ settings = {}, questions = [] } = {}) {
       return true;
     },
 
+    async getImage(name) {
+      return images[name] || null;
+    },
     async allAttempts() {
       return data.attempts.map((r) => ({ ...r }));
     },
